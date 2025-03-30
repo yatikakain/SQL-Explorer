@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import styled from 'styled-components';
 import QueryEditor from './components/QueryEditor';
 import QueryResults from './components/QueryResults';
@@ -54,10 +54,17 @@ function App() {
   const [queryHistory, setQueryHistory] = useState([]);
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const { isDarkMode } = useTheme();
+  const [filteredResults, setFilteredResults] = useState([]);
 
+  useEffect(() => {
+    setFilteredResults(queryResults); // Initialize filteredResults with full data
+  }, [queryResults]);
+  
   const handleExecuteQuery = useCallback((query) => {
     const dataset = sampleDatasets[activeQuery.dataset];
     setQueryResults(dataset);
+
+   
 
     const historyEntry = {
       id: Date.now(),
@@ -121,9 +128,10 @@ function App() {
           <QueryActions
             results={queryResults}
             onShowHistory={() => setIsHistoryModalOpen(true)}
+            onFilterResults={setFilteredResults}
           />
         )}
-        <QueryResults results={queryResults} />
+        <QueryResults results={filteredResults} />
 
         {isHistoryModalOpen && (
           <QueryHistory 

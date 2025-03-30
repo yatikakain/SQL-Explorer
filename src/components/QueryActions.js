@@ -48,7 +48,8 @@ const QueryActions = ({
   onCopy, 
   onDownload, 
   onExpand, 
-  onShowHistory 
+  onShowHistory,
+  onFilterResults 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredResults, setFilteredResults] = useState(results);
@@ -63,7 +64,7 @@ const QueryActions = ({
         value => String(value).toLowerCase().includes(term)
       )
     );
-    setFilteredResults(filtered);
+    onFilterResults(filtered);
   };
 
   const handleDownload = () => {

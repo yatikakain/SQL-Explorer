@@ -5,6 +5,8 @@ import { MdCheck } from 'react-icons/md';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
 import { EditorView } from '@codemirror/view';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const EditorContainer = styled.div`
   position: relative;
@@ -32,6 +34,24 @@ const RunQueryButton = styled.button`
   cursor: pointer;
   border-radius: 5px;
   transition: background-color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const Loader = styled.div`
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--text-primary);
+  border-top: 3px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: 10px;
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
 `;
 
 const IconButton = styled.button`
@@ -49,13 +69,25 @@ const IconButton = styled.button`
   }
 `;
 
-const QueryEditor = ({ initialQuery, onExecute }) => {
+const QueryEditor = ({ initialQuery , onExecute}) => {
   const [query, setQuery] = useState(initialQuery || '');
   const [expanded, setExpanded] = useState(false);
   const [copied, setCopied] = useState(false);
-  
+  const [loading, setLoading] = useState(false);
+  const storedTheme = localStorage.getItem("theme") || "light";
+
   const handleExecute = () => {
-    onExecute(query);
+    setLoading(true);
+    const startTime = performance.now();
+    
+    setTimeout(() => {
+      const endTime = performance.now();
+      const responseTime = (endTime - startTime).toFixed(2);
+      setLoading(false);
+      toast.success(`Query executed successfully! Returned 100 entries in ${responseTime}ms`);
+      onExecute(query); // Call the function to execute the query
+    }, 2000); // Simulating API call delay
+   
   };
 
   const toggleExpand = () => {
@@ -114,7 +146,10 @@ const QueryEditor = ({ initialQuery, onExecute }) => {
         extensions={[sql(), customTheme]}
         onChange={(value) => setQuery(value)}
       />
-      <RunQueryButton onClick={handleExecute}>Run Query</RunQueryButton>
+      <RunQueryButton onClick={handleExecute} disabled={loading}>
+        {loading ? <Loader /> : 'Run Query'}
+      </RunQueryButton>
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar  theme={storedTheme} />
     </EditorContainer>
   );
 };
