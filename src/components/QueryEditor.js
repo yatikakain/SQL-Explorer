@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
-import { FaExpand, FaCompress, FaCopy } from 'react-icons/fa';
-import { MdCheck } from 'react-icons/md';
-import CodeMirror from '@uiw/react-codemirror';
-import { sql } from '@codemirror/lang-sql';
-import { EditorView } from '@codemirror/view';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import React, { useState, useCallback } from "react";
+import styled from "styled-components";
+import { FaExpand, FaCompress, FaCopy } from "react-icons/fa";
+import { MdCheck } from "react-icons/md";
+import CodeMirror from "@uiw/react-codemirror";
+import { sql } from "@codemirror/lang-sql";
+import { EditorView } from "@codemirror/view";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const EditorContainer = styled.div`
   position: relative;
@@ -39,21 +39,6 @@ const RunQueryButton = styled.button`
   justify-content: center;
 `;
 
-const Loader = styled.div`
-  width: 20px;
-  height: 20px;
-  border: 3px solid var(--text-primary);
-  border-top: 3px solid transparent;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin-left: 10px;
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
-
 const IconButton = styled.button`
   background: none;
   border: none;
@@ -69,63 +54,56 @@ const IconButton = styled.button`
   }
 `;
 
-const QueryEditor = ({ initialQuery , onExecute}) => {
-  const [query, setQuery] = useState(initialQuery || '');
+// Add this styled-component with the keyframe animation
+const LoaderAnimation = styled.div`
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--text-primary);
+  border-top: 3px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: 10px;
+`;
+
+// Then update your Loader component to use this styled component
+const Loader = () => <LoaderAnimation />;
+
+const QueryEditor = ({ initialQuery, onExecute }) => {
+  const [query, setQuery] = useState(initialQuery || "");
   const [expanded, setExpanded] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
   const storedTheme = localStorage.getItem("theme") || "light";
 
   const handleExecute = () => {
     setLoading(true);
     const startTime = performance.now();
-    
+
     setTimeout(() => {
-      const endTime = performance.now();
-      const responseTime = (endTime - startTime).toFixed(2);
+      const responseTime = (performance.now() - startTime).toFixed(2);
       setLoading(false);
       toast.success(`Query executed successfully! Returned 100 entries in ${responseTime}ms`);
-      onExecute(query); // Call the function to execute the query
-    }, 2000); // Simulating API call delay
-   
+      onExecute(query);
+    }, 2000);
   };
 
-  const toggleExpand = () => {
-    setExpanded(!expanded);
+  const handleCopyQuery = async () => {
+    try {
+      await navigator.clipboard.writeText(query);
+      toast.success("Query copied!");
+    } catch (err) {
+      toast.error("Failed to copy query!");
+      console.error("Clipboard error:", err);
+    }
   };
 
-  const handleCopyQuery = () => {
-    navigator.clipboard.writeText(query).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }).catch(err => console.error('Failed to copy query:', err));
-  };
+  const toggleExpand = () => setExpanded(!expanded);
 
-  const customTheme = EditorView.theme({
-    '&': {
-      backgroundColor: 'var(--bg-primary) !important',
-      color: 'var(--text-primary) !important',
-      border: '1px solid var(--border-color)',
-    },
-    '.cm-content': {
-      caretColor: 'var(--text-primary)',
-    },
-    '.cm-gutters': {
-      backgroundColor: 'var(--bg-primary)',
-      color: 'var(--text-primary)',
-      borderRight: '1px solid var(--border-color)',
-    },
-    '.cm-activeLine': {
-      backgroundColor: 'var(--bg-secondary)',
-    },
-    '.cm-activeLineGutter': {
-      backgroundColor: 'var(--bg-secondary) !important',
-      color: 'var(--accent-color) !important',
-    },
-    '.cm-line': {
-      color: 'var(--text-primary)',
-    },
-  });
+  const handleChange = useCallback((value) => setQuery(value), []);
 
   return (
     <EditorContainer>
@@ -133,7 +111,7 @@ const QueryEditor = ({ initialQuery , onExecute}) => {
         <span>SQL Editor</span>
         <div>
           <IconButton onClick={handleCopyQuery}>
-            {copied ? <MdCheck /> : <FaCopy />}
+            <FaCopy />
           </IconButton>
           <IconButton onClick={toggleExpand}>
             {expanded ? <FaCompress /> : <FaExpand />}
@@ -142,14 +120,27 @@ const QueryEditor = ({ initialQuery , onExecute}) => {
       </Toolbar>
       <CodeMirror
         value={query}
-        height={expanded ? '500px' : '200px'}
-        extensions={[sql(), customTheme]}
-        onChange={(value) => setQuery(value)}
+        height={expanded ? "500px" : "200px"}
+        extensions={[sql()]}
+        onChange={handleChange}
+        theme={EditorView.theme({
+          "&": { backgroundColor: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border-color)" },
+          ".cm-content": { caretColor: "var(--text-primary)" },
+          ".cm-gutters": { backgroundColor: "var(--bg-primary)", color: "var(--text-primary)", borderRight: "1px solid var(--border-color)" },
+          '.cm-line': { color: 'var(--text-primary)', },
+          '.cm-activeLine': { backgroundColor: 'var(--bg-secondary)', },
+          '.cm-activeLineGutter': {
+            backgroundColor: 'var(--bg-secondary) !important',
+            color: 'var(--accent-color) !important',
+          },
+          ".cm-activeLine": { backgroundColor: "var(--bg-secondary)" },
+          ".cm-tooltip-autocomplete": { backgroundColor: "var(--bg-secondary)", color: "var(--text-primary)", border: "1px solid var(--border-color)" },
+        })}
       />
       <RunQueryButton onClick={handleExecute} disabled={loading}>
-        {loading ? <Loader /> : 'Run Query'}
+        {loading ? <Loader /> : "Run Query"}
       </RunQueryButton>
-      <ToastContainer position="top-right" autoClose={3000} hideProgressBar  theme={storedTheme} />
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar theme={storedTheme} />
     </EditorContainer>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import styled from "styled-components";
 import { Star, Trash2, Plus } from "lucide-react";
 
@@ -8,26 +8,44 @@ const SidebarContainer = styled.div`
   padding: 1rem;
 `;
 
-const QueryItem = styled.div`
+const QueryItem = React.memo(({ query, active, onSelect, onToggleStar, onDelete, isStarred }) => (
+  <QueryRow active={active} onClick={() => onSelect(query)}>
+    <QueryName>{query.name}</QueryName>
+    <IconGroup>
+      <IconButton onClick={(e) => { e.stopPropagation(); onToggleStar(query.id); }} aria-label="Star Query">
+        <Star size={16} fill={isStarred ? "yellow" : "none"} />
+      </IconButton>
+      <IconButton onClick={(e) => { e.stopPropagation(); onDelete(query.id); }} aria-label="Delete Query">
+        <Trash2 size={16} />
+      </IconButton>
+    </IconGroup>
+  </QueryRow>
+));
+
+const QueryRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: ${(props) => (props.active ? "var(--accent-color)" : "var(--bg-secondary)")};
+  background-color: ${({ active }) => (active ? "var(--accent-color)" : "var(--bg-secondary)")};
   color: var(--text-primary);
   padding: 0.75rem;
-  margin-bottom: 0.5rem;
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background 0.3s ease;
 
   &:hover {
-    background-color: ${(props) => (props.active ? "#357abd" : "var(--border-color)")};
+    background-color: ${({ active }) => (active ? "#357abd" : "var(--border-color)")};
   }
 `;
 
 const QueryName = styled.span`
   font-size: 0.9rem;
   flex-grow: 1;
+`;
+
+const IconGroup = styled.div`
+  display: flex;
+  align-items: center;
 `;
 
 const IconButton = styled.button`
@@ -39,13 +57,17 @@ const IconButton = styled.button`
   display: flex;
   align-items: center;
   margin-left: 0.5rem;
+
+  &:hover {
+    opacity: 1;
+  }
 `;
 
 const AddButton = styled.button`
   width: 100%;
   padding: 0.75rem;
   border: 1px solid var(--border-color);
-  background-color:var(--bg-secondary);
+  background-color: var(--bg-secondary);
   color: var(--text-primary);
   border-radius: 4px;
   cursor: pointer;
@@ -55,6 +77,7 @@ const AddButton = styled.button`
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+  transition: background 0.3s;
 
   &:hover {
     background-color: #357abd;
@@ -126,71 +149,43 @@ const CancelButton = styled(Button)`
   color: var(--text-primary);
 `;
 
-const SavedQueries = ({ queries = [], activeQueryId = null, onSelectQuery, onDeleteQuery, onAddQuery }) => {
-  const [starred, setStarred] = useState([]);
+const SavedQueries = ({ queries = [], activeQueryId, onSelectQuery, onDeleteQuery, onAddQuery }) => {
+  const [starred, setStarred] = useState(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [newQueryName, setNewQueryName] = useState("");
-  const [newQueryText, setNewQueryText] = useState("");
+  const [newQuery, setNewQuery] = useState({ name: "", text: "" });
 
-  const toggleStar = (queryId) => {
-    setStarred((prev) => (prev.includes(queryId) ? prev.filter((id) => id !== queryId) : [...prev, queryId]));
-  };
+  const toggleStar = useCallback((queryId) => {
+    setStarred((prev) => {
+      const newStarred = new Set(prev);
+      newStarred.has(queryId) ? newStarred.delete(queryId) : newStarred.add(queryId);
+      return newStarred;
+    });
+  }, []);
 
-  const handleAddQuery = () => {
-    if (newQueryName.trim() && newQueryText.trim()) {
-      onAddQuery({ id: Date.now(), name: newQueryName, query: newQueryText, dataset: 'employees' });
-      setNewQueryName("");
-      setNewQueryText("");
+  const handleAddQuery = useCallback(() => {
+    if (newQuery.name.trim() && newQuery.text.trim()) {
+      onAddQuery({ id: Date.now(), name: newQuery.name, query: newQuery.text, dataset: "employees" });
+      setNewQuery({ name: "", text: "" });
       setIsModalOpen(false);
     }
-  };
+  }, [newQuery, onAddQuery]);
 
-  return (
-    <>
-      <SidebarContainer>
-        {queries.map((query) => (
-          <QueryItem key={query.id} active={query.id === activeQueryId} onClick={() => onSelectQuery(query)}>
-            <QueryName>{query.name}</QueryName>
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <IconButton
-                active={starred.includes(query.id)}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggleStar(query.id);
-                }}
-              >
-                <Star size={16} fill={starred.includes(query.id) ? "yellow" : "none"} />
-              </IconButton>
-              <IconButton
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteQuery(query.id);
-                }}
-              >
-                <Trash2 size={16} />
-              </IconButton>
-            </div>
-          </QueryItem>
-        ))}
-        <AddButton onClick={() => setIsModalOpen(true)}>
-          <Plus size={16} /> Add Query
-        </AddButton>
-      </SidebarContainer>
-
-      {isModalOpen && (
+  const modalContent = useMemo(
+    () =>
+      isModalOpen && (
         <ModalOverlay>
           <ModalContent>
             <h3>Add New Query</h3>
             <Input
               type="text"
               placeholder="Query Name"
-              value={newQueryName}
-              onChange={(e) => setNewQueryName(e.target.value)}
+              value={newQuery.name}
+              onChange={(e) => setNewQuery((prev) => ({ ...prev, name: e.target.value }))}
             />
             <TextArea
               placeholder="Enter SQL Query"
-              value={newQueryText}
-              onChange={(e) => setNewQueryText(e.target.value)}
+              value={newQuery.text}
+              onChange={(e) => setNewQuery((prev) => ({ ...prev, text: e.target.value }))}
             />
             <ButtonGroup>
               <CancelButton onClick={() => setIsModalOpen(false)}>Cancel</CancelButton>
@@ -198,7 +193,29 @@ const SavedQueries = ({ queries = [], activeQueryId = null, onSelectQuery, onDel
             </ButtonGroup>
           </ModalContent>
         </ModalOverlay>
-      )}
+      ),
+    [isModalOpen, newQuery, handleAddQuery]
+  );
+
+  return (
+    <>
+      <SidebarContainer>
+        {queries.map((query) => (
+          <QueryItem
+            key={query.id}
+            query={query}
+            active={query.id === activeQueryId}
+            onSelect={onSelectQuery}
+            onToggleStar={toggleStar}
+            onDelete={onDeleteQuery}
+            isStarred={starred.has(query.id)}
+          />
+        ))}
+        <AddButton onClick={() => setIsModalOpen(true)}>
+          <Plus size={16} /> Add Query
+        </AddButton>
+      </SidebarContainer>
+      {modalContent}
     </>
   );
 };

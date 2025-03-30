@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
+import { debounce } from 'lodash';
 
 const ActionContainer = styled.div`
   display: flex;
@@ -45,49 +46,51 @@ const SearchInput = styled.input`
 
 const QueryActions = ({ 
   results, 
-  onCopy, 
-  onDownload, 
-  onExpand, 
   onShowHistory,
   onFilterResults 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredResults, setFilteredResults] = useState(results);
 
-  const handleSearch = (e) => {
+  // Debounced search function to optimize performance
+  const handleSearch = useMemo(() => 
+    debounce((term) => {
+      const filtered = results.filter(row => 
+        Object.values(row).some(
+          value => String(value).toLowerCase().includes(term)
+        )
+      );
+      onFilterResults(filtered);
+    }, 300), 
+    [results, onFilterResults]
+  );
+
+  const handleChange = useCallback((e) => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
+    handleSearch(term);
+  }, [handleSearch]);
 
-    // Basic search across all results
-    const filtered = results.filter(row => 
-      Object.values(row).some(
-        value => String(value).toLowerCase().includes(term)
-      )
-    );
-    onFilterResults(filtered);
-  };
+  const handleDownload = useCallback(() => {
+    if (!results.length) return;
 
-  const handleDownload = () => {
-    // Create CSV file
     const csvContent = [
-      Object.keys(results[0] || {}).join(','),
+      Object.keys(results[0] || {}).join(','), // Header
       ...results.map(row => 
         Object.values(row).map(val => 
-          `"${String(val).replace(/"/g, '""')}"`
+          `"${String(val).replace(/"/g, '""')}"` // Escape quotes
         ).join(',')
       )
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'query_results.csv');
-    link.style.visibility = 'hidden';
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'query_results.csv';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
+  }, [results]);
 
   return (
     <ActionContainer>
@@ -98,16 +101,16 @@ const QueryActions = ({
         <ActionButton onClick={onShowHistory}>
           <i className="fas fa-history"></i> History
         </ActionButton>
-
       </ActionGroup>
+      
       <SearchInput 
         type="text" 
         placeholder="Search results..." 
         value={searchTerm}
-        onChange={handleSearch}
+        onChange={handleChange}
       />
     </ActionContainer>
   );
 };
 
-export default QueryActions;
+export default React.memo(QueryActions);

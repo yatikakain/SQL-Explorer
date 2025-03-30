@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
+import React, { useState, useMemo } from "react";
+import styled from "styled-components";
 
 const ResultsContainer = styled.div`
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   overflow-x: auto;
   padding: 1rem;
+  border-radius: 8px;
 `;
 
 const ResultsTable = styled.table`
@@ -24,6 +25,7 @@ const ResultsTable = styled.table`
     font-weight: bold;
     position: sticky;
     top: 0;
+    z-index: 1;
   }
 
   tr:nth-child(even) {
@@ -51,8 +53,14 @@ const PaginationControls = styled.div`
     padding: 0.5rem 1rem;
     border: 1px solid var(--border-color);
     background-color: var(--bg-primary);
+    color: var(--text-primary);
     cursor: pointer;
-    transition: background 0.3s;
+    transition: background 0.3s, transform 0.2s;
+    
+    &:hover:not(:disabled) {
+      background-color: var(--button-hover);
+      transform: scale(1.05);
+    }
 
     &:disabled {
       cursor: not-allowed;
@@ -61,56 +69,60 @@ const PaginationControls = styled.div`
   }
 `;
 
-const QueryResults = ({ results }) => {
+const QueryResults = ({ results = [] }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
 
-  if (!results || results.length === 0) {
-    return (
-      <EmptyState>
-        No results to display. Run a query to see results.
-      </EmptyState>
-    );
+  // Memoized data calculations
+  const columns = useMemo(() => (results.length > 0 ? Object.keys(results[0]) : []), [results]);
+  const totalPages = useMemo(() => Math.ceil(results.length / rowsPerPage), [results.length]);
+  const paginatedResults = useMemo(
+    () => results.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage),
+    [results, currentPage, rowsPerPage]
+  );
+
+  if (results.length === 0) {
+    return <EmptyState>No results to display. Run a query to see results.</EmptyState>;
   }
-
-  // Get column headers
-  const columns = Object.keys(results[0]);
-
-  // Pagination logic
-  const totalPages = Math.ceil(results.length / rowsPerPage);
-  const startIndex = (currentPage - 1) * rowsPerPage;
-  const paginatedResults = results.slice(startIndex, startIndex + rowsPerPage);
 
   return (
     <ResultsContainer>
-      <ResultsTable>
+      <ResultsTable role="table">
         <thead>
-          <tr>
-            {columns.map((column, index) => (
-              <th key={index}>{column}</th>
+          <tr role="row">
+            {columns.map((column) => (
+              <th key={column} role="columnheader">
+                {column}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {paginatedResults.map((row, rowIndex) => (
-            <tr key={rowIndex}>
-              {columns.map((column, colIndex) => (
-                <td key={colIndex}>{row[column]}</td>
+            <tr key={rowIndex} role="row">
+              {columns.map((column) => (
+                <td key={column} role="cell">
+                  {row[column]}
+                </td>
               ))}
             </tr>
           ))}
         </tbody>
       </ResultsTable>
 
-      <PaginationControls>
-        <button style={{"color":"var(--text-primary)"}} onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
-          Previous
-        </button>
-        <span>Page {currentPage} of {totalPages}</span>
-        <button style={{"color":"var(--text-primary)"}} onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages}>
-          Next
-        </button>
-      </PaginationControls>
+      {totalPages > 1 && (
+        <PaginationControls>
+          <button onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1} aria-disabled={currentPage === 1}>
+            Previous
+          </button>
+          <span>
+            Page {currentPage} of {totalPages}
+          </span>
+          <button onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} aria-disabled={currentPage === totalPages}>
+            Next
+          </button>
+        </PaginationControls>
+      )}
     </ResultsContainer>
   );
 };
