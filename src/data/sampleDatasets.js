@@ -121,6 +121,16 @@ export const sampleDatasets = {
       { id: 17, name: 'Nightstand', category: 'Furniture', price: 200 },
       { id: 18, name: 'E-reader', category: 'Electronics', price: 250 },
       { id: 19, name: 'Office Desk', category: 'Furniture', price: 400 },
-      { id: 20, name:'Smart TV' ,category:'Electronics' ,price :1500}
+      { id: 20, name:'Smart TV' ,category:'Electronics' ,price :1500},
+      { id: 21, name:'Recliner Chair' ,category:'Furniture' ,price :600},
+      { id: 22, name:'Wireless Mouse' ,category:'Electronics' ,price :50},
+      { id: 23, name:'Dining Chair' ,category:'Furniture' ,price :100},
+      { id: 24, name:'Portable Charger' ,category:'Electronics' ,price :30},
+      { id: 25, name:'Filing Cabinet' ,category:'Furniture' ,price :250},
+      { id: 26, name:'VR Headset' ,category:'Electronics' ,price :400},
+      { id: 27, name:'Accent Table' ,category:'Furniture' ,price :150},
+      { id: 28, name:'Action Camera' ,category:'Electronics' ,price :350},
+      { id: 29, name:'Sofa Bed' ,category:'Furniture' ,price :900},
+      { id: 30, name:'Smart Home Hub' ,category:'Electronics' ,price :200}
     ]
   };
