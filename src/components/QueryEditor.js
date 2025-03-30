@@ -123,6 +123,7 @@ const QueryEditor = ({ initialQuery, onExecute }) => {
         height={expanded ? "500px" : "200px"}
         extensions={[sql()]}
         onChange={handleChange}
+        aria-label="sql-editor"
         theme={EditorView.theme({
           "&": { backgroundColor: "var(--bg-primary)", color: "var(--text-primary)", border: "1px solid var(--border-color)" },
           ".cm-content": { caretColor: "var(--text-primary)" },
