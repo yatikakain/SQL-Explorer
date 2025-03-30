@@ -1,124 +1,11 @@
-// import React from 'react';
-// import styled from 'styled-components';
-// import { Download, FileSpreadsheet } from 'lucide-react';
-
-
-// const ResultsContainer = styled.div`
-//   background-color: #2d2d2d;
-//   border-radius: 8px;
-//   padding: 1rem;
-//   max-height: 400px;
-//   overflow-y: auto;
-// `;
-
-// const Table = styled.table`
-//   width: 100%;
-//   border-collapse: collapse;
-//   color: #e0e0e0;
-// `;
-
-// const TableHeader = styled.thead`
-//   background-color: #3d3d3d;
-// `;
-
-// const TableRow = styled.tr`
-//   &:nth-child(even) {
-//     background-color: #383838;
-//   }
-// `;
-
-// const TableCell = styled.td`
-//   padding: 0.5rem;
-//   border: 1px solid #4d4d4d;
-// `;
-
-// const ActionBar = styled.div`
-//   display: flex;
-//   justify-content: flex-end;
-//   margin-top: 1rem;
-//   gap: 1rem;
-// `;
-
-// const Button = styled.button`
-//   display: flex;
-//   align-items: center;
-//   gap: 0.5rem;
-//   background-color: #4a90e2;
-//   color: white;
-//   border: none;
-//   padding: 0.5rem 1rem;
-//   border-radius: 4px;
-//   cursor: pointer;
-// `;
-
-// const QueryResults = ({ 
-//   results = [], 
-//   loading = false, 
-//   error = null 
-// }) => {
-//   const handleExportCSV = () => {
-//     // Simple CSV export logic
-//     const csvContent = results.map(row => 
-//       Object.values(row).join(',')
-//     ).join('\n');
-    
-//     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-//     const link = document.createElement('a');
-//     const url = URL.createObjectURL(blob);
-//     link.setAttribute('href', url);
-//     link.setAttribute('download', 'query_results.csv');
-//     link.style.visibility = 'hidden';
-//     document.body.appendChild(link);
-//     link.click();
-//     document.body.removeChild(link);
-//   };
-
-//   if (loading) return <div>Loading...</div>;
-//   if (error) return <div>Error: {error}</div>;
-//   if (results.length === 0) return <div>No results</div>;
-
-//   const headers = Object.keys(results[0]);
-
-//   return (
-//     <ResultsContainer>
-//       <Table>
-//         <TableHeader>
-//           <tr>
-//             {headers.map(header => (
-//               <TableCell as="th" key={header}>{header}</TableCell>
-//             ))}
-//           </tr>
-//         </TableHeader>
-//         <tbody>
-//           {results.map((row, index) => (
-//             <TableRow key={index}>
-//               {headers.map(header => (
-//                 <TableCell key={`${index}-${header}`}>
-//                   {row[header]}
-//                 </TableCell>
-//               ))}
-//             </TableRow>
-//           ))}
-//         </tbody>
-//       </Table>
-//       <ActionBar>
-//         <Button onClick={handleExportCSV}>
-//           <FileSpreadsheet size={16} /> Export CSV
-//         </Button>
-//       </ActionBar>
-//     </ResultsContainer>
-//   );
-// };
-
-// export default QueryResults;
-
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 
 const ResultsContainer = styled.div`
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   overflow-x: auto;
+  padding: 1rem;
 `;
 
 const ResultsTable = styled.table`
@@ -154,7 +41,30 @@ const EmptyState = styled.div`
   color: var(--text-secondary);
 `;
 
+const PaginationControls = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+
+  button {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+    cursor: pointer;
+    transition: background 0.3s;
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+`;
+
 const QueryResults = ({ results }) => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 10;
+
   if (!results || results.length === 0) {
     return (
       <EmptyState>
@@ -165,6 +75,11 @@ const QueryResults = ({ results }) => {
 
   // Get column headers
   const columns = Object.keys(results[0]);
+
+  // Pagination logic
+  const totalPages = Math.ceil(results.length / rowsPerPage);
+  const startIndex = (currentPage - 1) * rowsPerPage;
+  const paginatedResults = results.slice(startIndex, startIndex + rowsPerPage);
 
   return (
     <ResultsContainer>
@@ -177,7 +92,7 @@ const QueryResults = ({ results }) => {
           </tr>
         </thead>
         <tbody>
-          {results.map((row, rowIndex) => (
+          {paginatedResults.map((row, rowIndex) => (
             <tr key={rowIndex}>
               {columns.map((column, colIndex) => (
                 <td key={colIndex}>{row[column]}</td>
@@ -186,6 +101,16 @@ const QueryResults = ({ results }) => {
           ))}
         </tbody>
       </ResultsTable>
+
+      <PaginationControls>
+        <button style={{"color":"var(--text-primary)"}} onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))} disabled={currentPage === 1}>
+          Previous
+        </button>
+        <span>Page {currentPage} of {totalPages}</span>
+        <button style={{"color":"var(--text-primary)"}} onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages}>
+          Next
+        </button>
+      </PaginationControls>
     </ResultsContainer>
   );
 };

@@ -66,22 +66,6 @@ const QueryActions = ({
     setFilteredResults(filtered);
   };
 
-  const handleCopy = () => {
-    // Convert results to CSV
-    const csvContent = [
-      // Header
-      Object.keys(results[0] || {}).join(','),
-      // Data rows
-      ...results.map(row => 
-        Object.values(row).map(val => 
-          `"${String(val).replace(/"/g, '""')}"`
-        ).join(',')
-      )
-    ].join('\n');
-
-    navigator.clipboard.writeText(csvContent);
-  };
-
   const handleDownload = () => {
     // Create CSV file
     const csvContent = [
@@ -107,18 +91,13 @@ const QueryActions = ({
   return (
     <ActionContainer>
       <ActionGroup>
-        <ActionButton onClick={handleCopy}>
-          <i className="fas fa-copy"></i> Copy
-        </ActionButton>
         <ActionButton onClick={handleDownload}>
           <i className="fas fa-download"></i> Export CSV
         </ActionButton>
         <ActionButton onClick={onShowHistory}>
           <i className="fas fa-history"></i> History
         </ActionButton>
-        <ActionButton onClick={onExpand}>
-          <i className="fas fa-expand"></i> Expand
-        </ActionButton>
+
       </ActionGroup>
       <SearchInput 
         type="text" 

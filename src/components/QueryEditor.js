@@ -1,145 +1,59 @@
-// import React, { useState } from 'react';
-// import { Controlled as CodeMirror } from 'react-codemirror2';
-// import 'codemirror/lib/codemirror.css';
-// import 'codemirror/theme/material.css';
-// import 'codemirror/mode/sql/sql';
-
-
-// const QueryEditor = ({ initialQuery, onExecute }) => {
-//   const [query, setQuery] = useState(initialQuery);
-
-//   const handleExecute = () => {
-//     onExecute(query);
-//   };
-
-//   return (
-//     <div className="query-editor">
-//       <CodeMirror
-//         value={query}
-//         options={{
-//           mode: 'sql',
-//           theme: 'material',
-//           lineNumbers: true
-//         }}
-//         onBeforeChange={(editor, data, value) => {
-//           setQuery(value);
-//         }}
-//       />
-//       <button 
-//         onClick={handleExecute} 
-//         className="execute-button"
-//       >
-//         Execute Query
-//       </button>
-//     </div>
-//   );
-// };
-
-// export default QueryEditor;
-
-// import React, { useState } from 'react';
-// import CodeMirror from '@uiw/react-codemirror';
-// import { sql } from '@codemirror/lang-sql';
-// import { oneDark } from '@codemirror/theme-one-dark';
-
-// const QueryEditor = ({ initialQuery, onExecute }) => {
-//   const [query, setQuery] = useState(initialQuery || '');
-
-//   const handleExecute = () => {
-//     onExecute(query);
-//   };
-//   const handleCopyQuery = () => {
-//     navigator.clipboard.writeText(query)
-//       .then(() => {
-//         alert('Query copied to clipboard');
-//       })
-//       .catch(err => {
-//         console.error('Failed to copy query: ', err);
-//       });
-//   };
-
-//   const handleDownloadQuery = () => {
-//     const blob = new Blob([query], { type: 'text/plain' });
-//     const url = URL.createObjectURL(blob);
-//     const link = document.createElement('a');
-//     link.href = url;
-//     link.download = 'query.sql';
-//     document.body.appendChild(link);
-//     link.click();
-//     document.body.removeChild(link);
-//     URL.revokeObjectURL(url);
-//   };
-
-//   return (
-//     <div className="query-editor">
-//       <CodeMirror
-//         value={query}
-//         height="200px"
-//         theme={oneDark}
-//         extensions={[sql()]}
-//         onChange={(value) => {
-//           setQuery(value);
-//         }}
-//       />
-//       <button 
-//         onClick={handleExecute} 
-//         className="execute-button"
-//       >
-//         Execute Query
-//       </button>
-//     </div>
-//   );
-// };
-
-// export default QueryEditor;
-
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
-import QueryActions from './QueryActions';
+import { FaExpand, FaCompress, FaCopy } from 'react-icons/fa';
+import { MdCheck } from 'react-icons/md';
+import CodeMirror from '@uiw/react-codemirror';
+import { sql } from '@codemirror/lang-sql';
+import { EditorView } from '@codemirror/view';
 
 const EditorContainer = styled.div`
   position: relative;
   width: 100%;
 `;
 
-const SqlTextarea = styled.textarea`
-  width: 100%;
-  min-height: ${props => props.expanded ? '500px' : '200px'};
-  max-height: ${props => props.expanded ? '800px' : '200px'};
-  font-family: 'Courier New', monospace;
-  font-size: 1rem;
-  padding: 1rem;
+const Toolbar = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
   background-color: var(--bg-secondary);
-  color: var(--text-primary);
   border: 1px solid var(--border-color);
-  resize: ${props => props.expanded ? 'vertical' : 'none'};
-  transition: min-height 0.3s ease, max-height 0.3s ease;
-  line-height: 1.5;
+  border-bottom: none;
 `;
 
 const RunQueryButton = styled.button`
-  background-color: var(--button-bg);
+  background-color: var(--accent-color);
   color: var(--text-primary);
   border: none;
-  padding: 0.5rem 1rem;
+  padding: 0.75rem 1.5rem;
   margin-top: 1rem;
+  font-size: 1rem;
+  font-weight: bold;
   cursor: pointer;
+  border-radius: 5px;
+  transition: background-color 0.3s ease;
+`;
 
+const IconButton = styled.button`
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  opacity: 0.7;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.3rem;
+  margin-left: 0.5rem;
+  
   &:hover {
-    background-color: var(--button-hover);
+    color: var(--button-hover);
   }
 `;
 
-const QueryEditor = ({ 
-  initialQuery, 
-  onExecute, 
-  results = [], 
-  onShowHistory 
-}) => {
-  const [query, setQuery] = useState(initialQuery);
+const QueryEditor = ({ initialQuery, onExecute }) => {
+  const [query, setQuery] = useState(initialQuery || '');
   const [expanded, setExpanded] = useState(false);
-  const textareaRef = useRef(null);
-
+  const [copied, setCopied] = useState(false);
+  
   const handleExecute = () => {
     onExecute(query);
   };
@@ -148,23 +62,59 @@ const QueryEditor = ({
     setExpanded(!expanded);
   };
 
+  const handleCopyQuery = () => {
+    navigator.clipboard.writeText(query).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(err => console.error('Failed to copy query:', err));
+  };
+
+  const customTheme = EditorView.theme({
+    '&': {
+      backgroundColor: 'var(--bg-primary) !important',
+      color: 'var(--text-primary) !important',
+      border: '1px solid var(--border-color)',
+    },
+    '.cm-content': {
+      caretColor: 'var(--text-primary)',
+    },
+    '.cm-gutters': {
+      backgroundColor: 'var(--bg-primary)',
+      color: 'var(--text-primary)',
+      borderRight: '1px solid var(--border-color)',
+    },
+    '.cm-activeLine': {
+      backgroundColor: 'var(--bg-secondary)',
+    },
+    '.cm-activeLineGutter': {
+      backgroundColor: 'var(--bg-secondary) !important',
+      color: 'var(--accent-color) !important',
+    },
+    '.cm-line': {
+      color: 'var(--text-primary)',
+    },
+  });
+
   return (
     <EditorContainer>
-      <SqlTextarea
-        ref={textareaRef}
+      <Toolbar>
+        <span>SQL Editor</span>
+        <div>
+          <IconButton onClick={handleCopyQuery}>
+            {copied ? <MdCheck /> : <FaCopy />}
+          </IconButton>
+          <IconButton onClick={toggleExpand}>
+            {expanded ? <FaCompress /> : <FaExpand />}
+          </IconButton>
+        </div>
+      </Toolbar>
+      <CodeMirror
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        expanded={expanded}
-        placeholder="Enter your SQL query here..."
+        height={expanded ? '500px' : '200px'}
+        extensions={[sql(), customTheme]}
+        onChange={(value) => setQuery(value)}
       />
-      <QueryActions 
-        results={results}
-        onExpand={toggleExpand}
-        onShowHistory={onShowHistory}
-      />
-      <RunQueryButton onClick={handleExecute}>
-        Run Query
-      </RunQueryButton>
+      <RunQueryButton onClick={handleExecute}>Run Query</RunQueryButton>
     </EditorContainer>
   );
 };
